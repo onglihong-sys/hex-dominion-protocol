@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>HEX DOMINION // Turn-Based Strategy for Humans & AI Agents</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=IBM+Plex+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0B0F17;
+    --panel: #131B29;
+    --panel-alt: #192336;
+    --border: #283652;
+    --text: #F0F4FC;
+    --muted: #8FA1C2;
+    --accent: #38BDF8;
+    --gold: #F59E0B;
+    --p0: #38BDF8; /* Cyan */
+    --p1: #F43F5E; /* Crimson */
+    --p2: #10B981; /* Emerald */
+    --p3: #A855F7; /* Violet */
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: radial-gradient(circle at 50% 10%, #172238 0%, #090D14 100%);
+    color: var(--text);
+    font-family: 'Inter', -apple-system, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 22px;
+    background: rgba(15, 22, 34, 0.92);
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .logo-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .logo-badge {
+    font-family: 'Chakra Petch', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: #090D14;
+    background: linear-gradient(135deg, #38BDF8, #818CF8);
+    padding: 4px 12px;
+    border-radius: 6px;
+  }
+  .match-pill {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12.5px;
+    background: var(--panel-alt);
+    border: 1px solid var(--border);
+    padding: 5px 11px;
+    border-radius: 6px;
+    color: var(--accent);
+  }
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .btn {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 7px 13px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--panel-alt);
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.14s ease;
+  }
+  .btn:hover:not(:disabled) {
+    border-color: var(--accent);
+    background: #21304B;
+  }
+  .btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, #0284C7, #2563EB);
+    border-color: #38BDF8;
+    color: #FFF;
+  }
+  .btn-gold {
+    background: linear-gradient(135deg, #D97706, #B45309);
+    border-color: #FBBF24;
+    color: #FFF;
+  }
+  .workspace {
+    display: grid;
+    grid-template-columns: 310px 1fr 340px;
+    gap: 16px;
+    padding: 16px 20px;
+    flex: 1;
+    max-width: 1480px;
+    width: 100%;
+    margin: 0 auto;
+  }
+  @media (max-width: 1100px) {
+    .workspace { grid-template-columns: 1fr; }
+  }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 14px;
+  }
+  .card-title {
+    font-family: 'Chakra Petch', sans-serif;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .player-row {
+    padding: 10px;
+    border-radius: 8px;
+    background: var(--panel-alt);
+    border: 1.5px solid transparent;
+    margin-bottom: 8px;
+    transition: all 0.15s ease;
+  }
+  .player-row.active-turn {
+    border-color: var(--gold);
+    box-shadow: 0 0 14px rgba(245, 158, 11, 0.22);
+  }
+  .player-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+  .player-name {
+    font-weight: 700;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .swatch {
+    width: 11px;
+    height: 11px;
+    border-radius: 3px;
+    display: inline-block;
+  }
+  .role-tag {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: rgba(255,255,255,0.08);
+    color: var(--muted);
+  }
+  .stats-strip {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .stat-cell {
+    background: rgba(0,0,0,0.26);
+    padding: 4px 6px;
+    border-radius: 4px;
+    text-align: center;
+  }
+  .stat-cell strong {
+    color: var(--text);
+    display: block;
+    font-size: 13px;
+  }
+  /* Center Board Stage */
+  .board-stage {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px;
+    position: relative;
+  }
+  .turn-banner {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--panel-alt);
+    border: 1px solid var(--border);
+    padding: 10px 14px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .action-bar {
+    display: flex;
+    gap: 7px;
+    flex-wrap: wrap;
+    width: 100%;
+    justify-content: center;
+    margin-top: 8px;
+  }
+  .mode-btn {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1.5px solid var(--border);
+    background: var(--panel-alt);
+    color: var(--text);
+    cursor: pointer;
+  }
+  .mode-btn.selected {
+    border-color: var(--gold);
+    background: rgba(245, 158, 11, 0.18);
+    color: #FDE68A;
+  }
+  #hexSvg {
+    width: 100%;
+    max-width: 580px;
+    height: 490px;
+    user-select: none;
+  }
+  .hex-poly {
+    stroke: #24324D;
+    stroke-width: 2;
+    cursor: pointer;
+    transition: fill 0.15s ease, stroke 0.15s ease, transform 0.1s ease;
+  }
+  .hex-poly:hover {
+    stroke: #F8FAFC;
+    stroke-width: 2.6;
+  }
+  .hex-poly.legal-target {
+    stroke: #FBBF24;
+    stroke-width: 2.5;
+    stroke-dasharray: 4 2;
+  }
+  .log-box {
+    max-height: 220px;
+    overflow-y: auto;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11.5px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .log-item {
+    padding: 5px 8px;
+    background: var(--panel-alt);
+    border-radius: 4px;
+    border-left: 3px solid var(--accent);
+  }
+  .code-block {
+    background: #080C12;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 9px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: #A5F3FC;
+    overflow-x: auto;
+    white-space: pre;
+    line-height: 1.4;
+  }
+  .input-inline {
+    background: #080C12;
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 9px;
+    border-radius: 5px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    width: 115px;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo-wrap">
+    <span class="logo-badge">HEX DOMINION</span>
+    <span class="match-pill" id="matchCodeBadge">MATCH: HEX-704</span>
+    <span style="font-size:12.5px;color:var(--muted);">2–4 Players · Humans & HTTP/JSON AI Agents · Target: <strong>20 IP</strong> or Round 12</span>
+  </div>
+  <div class="header-actions">
+    <input type="text" class="input-inline" id="joinCodeInput" placeholder="Match Code" value="HEX-704" />
+    <button class="btn" onclick="joinMatchByCode()">Join / Sync</button>
+    <button class="btn btn-primary" onclick="createNewMatch(2)">New 2P Match</button>
+    <button class="btn btn-primary" onclick="createNewMatch(4)">New 4P Match</button>
+    <button class="btn btn-gold" onclick="addBotSeat()">+ Add Bot Seat</button>
+  </div>
+</header>
+
+<div class="workspace">
+  <!-- Left Column: Players, Seats & One-Paragraph Rules -->
+  <div>
+    <div class="card">
+      <div class="card-title">
+        <span>COMMANDERS (2–4 SEATS)</span>
+        <span id="roundIndicator" style="color:var(--gold);">ROUND 1 / 12</span>
+      </div>
+      <div id="playersList"></div>
+      <div style="display:flex;gap:6px;margin-top:8px;">
+        <button class="btn" style="flex:1;" onclick="stepBotTurn()" id="botStepBtn">▶ Step AI Agent Turn</button>
+        <button class="btn" style="flex:1;" onclick="autoPlayRound()">⚡ Auto-Sim Round</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span>RULES IN ONE PARAGRAPH</span><span>WIN = 20 IP</span></div>
+      <p style="font-size:12.5px;color:var(--muted);line-height:1.5;">
+        2–4 Commanders (Humans or HTTP/JSON Agents) battle over 12 rounds on a 37-hex axial grid to reach <strong>20 Influence Points (IP)</strong> first. At the start of your turn you gain <strong>3 Action Points (AP)</strong> plus <strong>+1⚡ Energy per Relay Core (★)</strong> you hold. Spend AP/Energy on four counter-balanced actions:
+        <strong>Expand (1 AP)</strong> claims an adjacent neutral hex (+1 IP);
+        <strong>Fortify (1 AP + 1⚡)</strong> raises a friendly hex's shield to Lv.2 (+1 IP, blocks cheap captures);
+        <strong>Strike (2 AP)</strong> captures an adjacent enemy hex if your adjacent friendly hexes ≥ its shield level (steals +2 IP);
+        <strong>Overclock (2⚡)</strong> converts stored Energy into +1 AP and +2 IP.
+      </p>
+    </div>
+  </div>
+
+  <!-- Center Stage: Interactive Hex Grid & Tactical Controls -->
+  <div class="board-stage">
+    <div class="turn-banner">
+      <div>
+        <div style="font-size:11px;color:var(--muted);font-family:'IBM Plex Mono',monospace;">ACTIVE COMMANDER</div>
+        <div id="activeBannerText" style="font-size:16px;font-weight:700;">P1 (Human Commander)</div>
+      </div>
+      <div style="display:flex;gap:14px;font-family:'IBM Plex Mono',monospace;font-size:13px;">
+        <span>AP: <strong id="activeAp" style="color:var(--accent);">3</strong></span>
+        <span>ENERGY: <strong id="activeEnergy" style="color:var(--gold);">1⚡</strong></span>
+      </div>
+      <div>
+        <button class="btn btn-gold" onclick="submitAction('END_TURN')">End Turn ⏭</button>
+      </div>
+    </div>
+
+    <svg id="hexSvg" viewBox="-250 -230 500 460"></svg>
+
+    <div class="action-bar">
+      <button class="mode-btn selected" data-mode="EXPAND" onclick="selectMode('EXPAND')">1. Expand (1 AP · Neutral)</button>
+      <button class="mode-btn" data-mode="FORTIFY" onclick="selectMode('FORTIFY')">2. Fortify (1 AP + 1⚡ · Shield)</button>
+      <button class="mode-btn" data-mode="STRIKE" onclick="selectMode('STRIKE')">3. Strike (2 AP · Enemy Hex)</button>
+      <button class="mode-btn" onclick="submitAction('OVERCLOCK')">4. Overclock (2⚡ → +1 AP & +2 IP)</button>
+    </div>
+  </div>
+
+  <!-- Right Column: Match Log, Replay Scrubber & HTTP/JSON Agent API -->
+  <div>
+    <div class="card">
+      <div class="card-title">
+        <span>MATCH LOG & REPLAY</span>
+        <span id="replayLabel" style="font-family:'IBM Plex Mono',monospace;font-size:11px;">LIVE</span>
+      </div>
+      <div style="margin-bottom:8px;display:flex;align-items:center;gap:8px;">
+        <span style="font-size:11px;color:var(--muted);font-family:'IBM Plex Mono',monospace;">Replay:</span>
+        <input type="range" id="replaySlider" min="0" max="0" value="0" style="flex:1;" oninput="scrubReplay(this.value)" />
+        <button class="btn" style="padding:3px 7px;font-size:10.5px;" onclick="exitReplay()">Live</button>
+      </div>
+      <div class="log-box" id="logBox"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span>AGENT HTTP/JSON API</span><span>REST v1</span></div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">
+        AI Agents read board state & legal moves and submit turns via standard JSON endpoints:
+      </div>
+      <div class="code-block" id="apiSnippetBox">GET  /api/matches/HEX-704
+POST /api/matches/HEX-704/join
+  {"name": "AlphaBot", "role": "agent"}
+POST /api/matches/HEX-704/move
+  {"player_id": "P2", "action": "EXPAND",
+   "q": 0, "r": -1}</div>
+      <div style="margin-top:8px;display:flex;gap:6px;">
+        <button class="btn" style="flex:1;" onclick="copyJsonState()">Copy State JSON</button>
+        <a class="btn" style="text-decoration:none;text-align:center;" href="https://github.com/onglihong-sys/hex-dominion-protocol" target="_blank" rel="noopener">GitHub Repo ↗</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const PLAYER_COLORS = ["#38BDF8", "#F43F5E", "#10B981", "#A855F7"];
+const HEX_SIZE = 32;
+const RELAY_CORES = new Set(["0,0", "0,-2", "2,-2", "2,0", "0,2", "-2,2", "-2,0"]);
+const SPAWN_COORDS = [
+  { q: -3, r: 0, name: "P1 (Human)", role: "human" },
+  { q: 3, r: 0, name: "P2 (TacticalBot)", role: "agent" },
+  { q: 0, r: -3, name: "P3 (AggroBot)", role: "agent" },
+  { q: 0, r: 3, name: "P4 (FortressBot)", role: "agent" }
+];
+
+let gameState = null;
+let selectedMode = "EXPAND";
+let replayIndex = null;
+
+function hexKey(q, r) { return `${q},${r}`; }
+function getNeighbors(q, r) {
+  return [
+    [q+1, r], [q+1, r-1], [q, r-1],
+    [q-1, r], [q-1, r+1], [q, r+1]
+  ].filter(([nq, nr]) => Math.abs(nq) <= 3 && Math.abs(nr) <= 3 && Math.abs(nq + nr) <= 3);
+}
+
+function buildInitialState(code = "HEX-704", numPlayers = 2) {
+  const tiles = {};
+  for (let q = -3; q <= 3; q++) {
+    for (let r = -3; r <= 3; r++) {
+      if (Math.abs(q + r) <= 3) {
+        const k = hexKey(q, r);
+        tiles[k] = {
+          q, r,
+          owner: null,
+          shield: 1,
+          isCore: RELAY_CORES.has(k)
+        };
+      }
+    }
+  }
+  const players = [];
+  for (let i = 0; i < numPlayers; i++) {
+    const sp = SPAWN_COORDS[i];
+    const pid = `P${i+1}`;
+    tiles[hexKey(sp.q, sp.r)].owner = i;
+    tiles[hexKey(sp.q, sp.r)].shield = 2;
+    players.push({
+      id: pid,
+      index: i,
+      name: sp.name,
+      role: sp.role,
+      color: PLAYER_COLORS[i],
+      ip: 3,
+      ap: i === 0 ? 3 : 0,
+      energy: 1
+    });
+  }
+  const st = {
+    match_code: code,
+    round: 1,
+    max_rounds: 12,
+    win_ip: 20,
+    turn_index: 0,
+    winner: null,
+    players,
+    tiles,
+    log: [`[R1] Match ${code} initialized with ${numPlayers} commanders.`],
+    history: []
+  };
+  saveSnapshot(st);
+  return st;
+}
+
+function saveSnapshot(st) {
+  const copy = JSON.parse(JSON.stringify({
+    round: st.round,
+    turn_index: st.turn_index,
+    winner: st.winner,
+    players: st.players,
+    tiles: st.tiles,
+    logLen: st.log.length
+  }));
+  st.history.push(copy);
+}
+
+function countOwned(st, pIdx) {
+  let hexes = 0, cores = 0;
+  Object.values(st.tiles).forEach(t => {
+    if (t.owner === pIdx) {
+      hexes++;
+      if (t.isCore) cores++;
+    }
+  });
+  return { hexes, cores };
+}
+
+function computeLegalMoves(st, pIdx = st.turn_index) {
+  if (st.winner) return [];
+  const p = st.players[pIdx];
+  if (!p) return [];
+  const moves = [];
+  const ownedCoords = Object.values(st.tiles).filter(t => t.owner === pIdx);
+  const seenTargets = new Set();
+
+  if (p.ap >= 1) {
+    ownedCoords.forEach(ot => {
+      // Fortify own tile
+      if (p.energy >= 1 && ot.shield < 2) {
+        moves.push({ action: "FORTIFY", q: ot.q, r: ot.r, cost_ap: 1, cost_energy: 1 });
+      }
+      // Check neighbors for Expand or Strike
+      getNeighbors(ot.q, ot.r).forEach(([nq, nr]) => {
+        const nk = hexKey(nq, nr);
+        if (seenTargets.has(nk)) return;
+        const nt = st.tiles[nk];
+        if (!nt) return;
+        if (nt.owner === null) {
+          seenTargets.add(nk);
+          moves.push({ action: "EXPAND", q: nq, r: nr, cost_ap: 1, cost_energy: 0 });
+        } else if (nt.owner !== pIdx && p.ap >= 2) {
+          const adjSupport = getNeighbors(nq, nr).filter(([aq, ar]) => st.tiles[hexKey(aq, ar)]?.owner === pIdx).length;
+          if (adjSupport >= nt.shield) {
+            seenTargets.add(nk);
+            moves.push({ action: "STRIKE", q: nq, r: nr, cost_ap: 2, cost_energy: 0, support: adjSupport });
+          }
+        }
+      });
+    });
+  }
+  if (p.energy >= 2) {
+    moves.push({ action: "OVERCLOCK", cost_ap: 0, cost_energy: 2 });
+  }
+  moves.push({ action: "END_TURN", cost_ap: 0, cost_energy: 0 });
+  return moves;
+}
+
+function applyMove(st, move) {
+  if (st.winner) return false;
+  const pIdx = st.turn_index;
+  const p = st.players[pIdx];
+  const act = move.action;
+
+  if (act === "OVERCLOCK") {
+    if (p.energy < 2) return false;
+    p.energy -= 2;
+    p.ap += 1;
+    p.ip += 2;
+    st.log.unshift(`[R${st.round}] ${p.id} used OVERCLOCK (+1 AP, +2 IP).`);
+  } else if (act === "EXPAND") {
+    const t = st.tiles[hexKey(move.q, move.r)];
+    if (!t || t.owner !== null || p.ap < 1) return false;
+    const adj = getNeighbors(move.q, move.r).some(([nq, nr]) => st.tiles[hexKey(nq, nr)]?.owner === pIdx);
+    if (!adj) return false;
+    p.ap -= 1;
+    t.owner = pIdx;
+    t.shield = 1;
+    const gain = t.isCore ? 2 : 1;
+    p.ip += gain;
+    st.log.unshift(`[R${st.round}] ${p.id} EXPANDED to (${move.q},${move.r})${t.isCore ? " ★CORE" : ""} (+${gain} IP).`);
+  } else if (act === "FORTIFY") {
+    const t = st.tiles[hexKey(move.q, move.r)];
+    if (!t || t.owner !== pIdx || t.shield >= 2 || p.ap < 1 || p.energy < 1) return false;
+    p.ap -= 1;
+    p.energy -= 1;
+    t.shield = 2;
+    p.ip += 1;
+    st.log.unshift(`[R${st.round}] ${p.id} FORTIFIED (${move.q},${move.r}) to Shield Lv.2 (+1 IP).`);
+  } else if (act === "STRIKE") {
+    const t = st.tiles[hexKey(move.q, move.r)];
+    if (!t || t.owner === null || t.owner === pIdx || p.ap < 2) return false;
+    const adjSupport = getNeighbors(move.q, move.r).filter(([aq, ar]) => st.tiles[hexKey(aq, ar)]?.owner === pIdx).length;
+    if (adjSupport < t.shield) return false;
+    const victim = st.players[t.owner];
+    p.ap -= 2;
+    t.owner = pIdx;
+    t.shield = 1;
+    p.ip += 2;
+    if (victim) victim.ip = Math.max(0, victim.ip - 1);
+    st.log.unshift(`[R${st.round}] ${p.id} STRUCK ${victim?.id || "enemy"} at (${move.q},${move.r}) (+2 IP)!`);
+  } else if (act === "END_TURN") {
+    st.log.unshift(`[R${st.round}] ${p.id} ended turn (IP: ${p.ip}).`);
+    advanceTurn(st);
+    saveSnapshot(st);
+    return true;
+  } else {
+    return false;
+  }
+
+  checkWinCondition(st);
+  if (!st.winner && p.ap === 0 && p.energy < 2) {
+    advanceTurn(st);
+  }
+  saveSnapshot(st);
+  return true;
+}
+
+function advanceTurn(st) {
+  checkWinCondition(st);
+  if (st.winner) return;
+  st.turn_index = (st.turn_index + 1) % st.players.length;
+  if (st.turn_index === 0) {
+    st.round += 1;
+    if (st.round > st.max_rounds) {
+      const sorted = [...st.players].sort((a, b) => b.ip - a.ip);
+      st.winner = sorted[0].id;
+      st.log.unshift(`🏆 MATCH COMPLETE! ${sorted[0].name} wins on Round 12 tiebreaker with ${sorted[0].ip} IP!`);
+      return;
+    }
+  }
+  const nextP = st.players[st.turn_index];
+  const { cores } = countOwned(st, st.turn_index);
+  nextP.ap = 3;
+  nextP.energy = Math.min(6, nextP.energy + 1 + cores);
+}
+
+function checkWinCondition(st) {
+  for (const p of st.players) {
+    if (p.ip >= st.win_ip) {
+      st.winner = p.id;
+      st.log.unshift(`🏆 VICTORY! ${p.name} reached ${p.ip} Influence Points!`);
+      return;
+    }
+  }
+}
+
+function chooseBotMove(st) {
+  const legal = computeLegalMoves(st, st.turn_index);
+  if (legal.length <= 1) return { action: "END_TURN" };
+  // Score moves heuristically: Strike Core > Expand Core > Strike > Overclock > Expand toward center > Fortify Core
+  let best = { action: "END_TURN" };
+  let bestScore = -1;
+  for (const m of legal) {
+    if (m.action === "END_TURN") continue;
+    let sc = 0;
+    const t = m.q !== undefined ? st.tiles[hexKey(m.q, m.r)] : null;
+    const distCenter = m.q !== undefined ? (Math.abs(m.q) + Math.abs(m.r) + Math.abs(m.q + m.r)) / 2 : 2;
+    if (m.action === "STRIKE") sc = 90 + (t?.isCore ? 35 : 0) - distCenter * 4;
+    else if (m.action === "EXPAND") sc = 65 + (t?.isCore ? 40 : 0) - distCenter * 6;
+    else if (m.action === "OVERCLOCK") sc = 72;
+    else if (m.action === "FORTIFY") sc = 45 + (t?.isCore ? 30 : 0);
+    if (sc > bestScore) {
+      bestScore = sc;
+      best = m;
+    }
+  }
+  return best;
+}
+
+function axialToPixel(q, r) {
+  const x = HEX_SIZE * Math.sqrt(3) * (q + r / 2);
+  const y = HEX_SIZE * (3 / 2) * r;
+  return [x, y];
+}
+
+function hexPoints(cx, cy, radius) {
+  const pts = [];
+  for (let i = 0; i < 6; i++) {
+    const angle = (Math.PI / 180) * (60 * i - 30);
+    pts.push(`${(cx + radius * Math.cos(angle)).toFixed(1)},${(cy + radius * Math.sin(angle)).toFixed(1)}`);
+  }
+  return pts.join(" ");
+}
+
+function renderBoard() {
+  const viewSt = replayIndex !== null && gameState.history[replayIndex]
+    ? { ...gameState, ...gameState.history[replayIndex] }
+    : gameState;
+
+  document.getElementById("matchCodeBadge").textContent = `MATCH: ${gameState.match_code}`;
+  document.getElementById("roundIndicator").textContent = viewSt.winner
+    ? `WINNER: ${viewSt.winner}`
+    : `ROUND ${viewSt.round} / ${ gameState.max_rounds }`;
+
+  const activeP = viewSt.players[viewSt.turn_index] || viewSt.players[0];
+  document.getElementById("activeBannerText").innerHTML = viewSt.winner
+    ? `<span style="color:var(--gold);">🏆 Winner: ${viewSt.winner}</span>`
+    : `<span style="color:${activeP.color};">● ${activeP.name}</span> <span style="font-size:12px;color:var(--muted);">(${activeP.role.toUpperCase()})</span>`;
+  document.getElementById("activeAp").textContent = activeP.ap;
+  document.getElementById("activeEnergy").textContent = `${activeP.energy}⚡`;
+
+  // Players list
+  const pHtml = viewSt.players.map((p, idx) => {
+    const { hexes, cores } = countOwned(viewSt, idx);
+    const isTurn = !viewSt.winner && viewSt.turn_index === idx;
+    return `
+      <div class="player-row ${isTurn ? "active-turn" : ""}">
+        <div class="player-top">
+          <div class="player-name">
+            <span class="swatch" style="background:${p.color};"></span>
+            <span>${p.id}: ${p.name}</span>
+          </div>
+          <span class="role-tag">${p.role.toUpperCase()}</span>
+        </div>
+        <div class="stats-strip">
+          <div class="stat-cell"><strong>${p.ip}/20</strong>IP</div>
+          <div class="stat-cell"><strong>${p.ap}</strong>AP</div>
+          <div class="stat-cell"><strong>${p.energy}⚡</strong>NRG</div>
+          <div class="stat-cell"><strong>${hexes} (${cores}★)</strong>HEX</div>
+        </div>
+      </div>
+    `;
+  }).join("");
+  document.getElementById("playersList").innerHTML = pHtml;
+
+  // Legal targets for current mode
+  const legalMoves = replayIndex === null ? computeLegalMoves(gameState) : [];
+  const modeTargets = new Set(
+    legalMoves.filter(m => m.action === selectedMode && m.q !== undefined).map(m => hexKey(m.q, m.r))
+  );
+
+  // Render SVG Hexes
+  const svgParts = [];
+  Object.values(viewSt.tiles).forEach(t => {
+    const [cx, cy] = axialToPixel(t.q, t.r);
+    const k = hexKey(t.q, t.r);
+    const isTarget = modeTargets.has(k);
+    let fill = "#182235";
+    if (t.owner !== null && viewSt.players[t.owner]) {
+      fill = viewSt.players[t.owner].color;
+    } else if (t.isCore) {
+      fill = "#243048";
+    }
+    const opacity = t.owner !== null ? (t.shield >= 2 ? "0.92" : "0.68") : "1.0";
+    svgParts.push(`
+      <g onclick="onHexClick(${t.q}, ${t.r})">
+        <polygon class="hex-poly ${isTarget ? "legal-target" : ""}"
+          points="${hexPoints(cx, cy, HEX_SIZE - 1.5)}"
+          fill="${fill}" fill-opacity="${opacity}" />
+        ${t.isCore ? `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="18" fill="none" stroke="#FBBF24" stroke-width="1.4" stroke-dasharray="3 2"/>` : ""}
+        <text x="${cx.toFixed(1)}" y="${(cy + 4).toFixed(1)}" text-anchor="middle"
+          font-family="IBM Plex Mono" font-size="10.5" font-weight="700"
+          fill="${t.owner !== null ? "#090D14" : "#94A3B8"}" style="pointer-events:none;">
+          ${t.isCore ? "★" : ""}${t.owner !== null ? `P${t.owner+1}` : `${t.q},${t.r}`}${t.shield >= 2 && t.owner !== null ? "🛡" : ""}
+        </text>
+      </g>
+    `);
+  });
+  document.getElementById("hexSvg").innerHTML = svgParts.join("");
+
+  // Replay slider & Log
+  const slider = document.getElementById("replaySlider");
+  slider.max = Math.max(0, gameState.history.length - 1);
+  if (replayIndex === null) slider.value = slider.max;
+  document.getElementById("replayLabel").textContent = replayIndex === null
+    ? `LIVE (STEP ${slider.max})`
+    : `REPLAY ${replayIndex}/${slider.max}`;
+
+  document.getElementById("logBox").innerHTML = gameState.log.slice(0, 25).map(l => `<div class="log-item">${l}</div>`).join("");
+}
+
+window.selectMode = function(m) {
+  selectedMode = m;
+  document.querySelectorAll(".mode-btn").forEach(b => {
+    if (b.dataset.mode) b.classList.toggle("selected", b.dataset.mode === m);
+  });
+  renderBoard();
+};
+
+window.onHexClick = function(q, r) {
+  if (replayIndex !== null) exitReplay();
+  const ok = applyMove(gameState, { action: selectedMode, q, r });
+  if (ok) {
+    syncToServer();
+    renderBoard();
+  }
+};
+
+window.submitAction = function(act) {
+  if (replayIndex !== null) exitReplay();
+  applyMove(gameState, { action: act });
+  syncToServer();
+  renderBoard();
+};
+
+window.stepBotTurn = function() {
+  if (replayIndex !== null) exitReplay();
+  if (gameState.winner) return;
+  const move = chooseBotMove(gameState);
+  applyMove(gameState, move);
+  syncToServer();
+  renderBoard();
+};
+
+window.autoPlayRound = function() {
+  if (replayIndex !== null) exitReplay();
+  for (let i = 0; i < 8; i++) {
+    if (gameState.winner) break;
+    const m = chooseBotMove(gameState);
+    applyMove(gameState, m);
+  }
+  syncToServer();
+  renderBoard();
+};
+
+window.createNewMatch = function(n) {
+  replayIndex = null;
+  const code = "HEX-" + Math.floor(100 + Math.random() * 900);
+  document.getElementById("joinCodeInput").value = code;
+  gameState = buildInitialState(code, n);
+  syncToServer();
+  renderBoard();
+};
+
+window.addBotSeat = function() {
+  if (gameState.players.length >= 4) return;
+  const idx = gameState.players.length;
+  const sp = SPAWN_COORDS[idx];
+  gameState.tiles[hexKey(sp.q, sp.r)].owner = idx;
+  gameState.tiles[hexKey(sp.q, sp.r)].shield = 2;
+  gameState.players.push({
+    id: `P${idx+1}`,
+    index: idx,
+    name: sp.name,
+    role: "agent",
+    color: PLAYER_COLORS[idx],
+    ip: 3,
+    ap: 0,
+    energy: 1
+  });
+  gameState.log.unshift(`[R${gameState.round}] Added AI Agent seat P${idx+1} (${sp.name}) at (${sp.q},${sp.r}).`);
+  saveSnapshot(gameState);
+  syncToServer();
+  renderBoard();
+};
+
+window.scrubReplay = function(val) {
+  replayIndex = parseInt(val, 10);
+  renderBoard();
+};
+
+window.exitReplay = function() {
+  replayIndex = null;
+  renderBoard();
+};
+
+window.copyJsonState = function() {
+  const payload = {
+    match_code: gameState.match_code,
+    round: gameState.round,
+    turn_player: gameState.players[gameState.turn_index]?.id,
+    players: gameState.players,
+    legal_moves: computeLegalMoves(gameState)
+  };
+  navigator.clipboard?.writeText(JSON.stringify(payload, null, 2));
+  alert("Copied live Match State & Legal Moves JSON to clipboard!");
+};
+
+async function syncToServer() {
+  try {
+    await fetch(`/api/matches/${encodeURIComponent(gameState.match_code)}/sync`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(gameState)
+    });
+  } catch (e) {
+    // Standalone / GitHub Pages mode works 100% locally too
+  }
+}
+
+window.joinMatchByCode = async function() {
+  const code = document.getElementById("joinCodeInput").value.trim().toUpperCase() || "HEX-704";
+  try {
+    const res = await fetch(`/api/matches/${encodeURIComponent(code)}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.tiles) {
+        gameState = data;
+        replayIndex = null;
+        renderBoard();
+        return;
+      }
+    }
+  } catch (e) {}
+  gameState = buildInitialState(code, 2);
+  renderBoard();
+};
+
+// Initialize default match with a few opening moves so the board immediately shows rich tactical play
+gameState = buildInitialState("HEX-704", 3);
+applyMove(gameState, { action: "EXPAND", q: -2, r: 0 });
+applyMove(gameState, { action: "EXPAND", q: -1, r: 0 });
+applyMove(gameState, { action: "END_TURN" });
+applyMove(gameState, { action: "EXPAND", q: 2, r: 0 });
+applyMove(gameState, { action: "FORTIFY", q: 2, r: 0 });
+renderBoard();
+</script>
+</body>
+</html>
